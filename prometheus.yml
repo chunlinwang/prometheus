@@ -1,0 +1,38 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+   - job_name: "prometheus"
+     scrape_interval: 1m
+     static_configs:
+     - targets: ["localhost:9090"]
+
+   - job_name: "node"
+     static_configs:
+     - targets: ["node-exporter:9100"]
+
+   - job_name: "app1"
+     static_configs:
+     - targets: ["app1:3001"]
+
+   - job_name: "app2"
+     static_configs:
+     - targets: ["app2:3002"]
+
+   - job_name: "app3"
+     static_configs:
+       - targets: ["app3:3003"]
+
+   - job_name: "pushgateway"
+     scrape_interval: 15s
+     honor_labels: true
+     static_configs:
+       - targets: ["pushgateway:9091"]
+         labels:
+#     pushgateway_instance: metricfire
+
+# remote_write:
+#   - url: "<Your Prometheus remote_write endpoint>"
+#     basic_auth:
+#       username: "*"
+#       password: "*"
