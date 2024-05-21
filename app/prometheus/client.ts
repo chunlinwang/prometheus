@@ -9,7 +9,7 @@ import {
   CounterConfiguration,
   GaugeConfiguration,
   HistogramConfiguration,
-  SummaryConfiguration, Metric,
+  SummaryConfiguration, Metric, register,
 } from 'prom-client';
 import * as client from 'prom-client';
 import { prometheus } from '../configuration';
@@ -17,17 +17,17 @@ import * as http from 'node:http';
 import * as os from 'node:os';
 
 export class PrometheusClient {
-  private readonly register: Registry<'text/plain; version=0.0.4; charset=utf-8'>;
+  private readonly registry: Registry<'text/plain; version=0.0.4; charset=utf-8'>;
   private readonly gateway: client.Pushgateway<client.RegistryContentType>;
 
   constructor() {
-    this.register = new Registry();
-    this.register.setDefaultLabels({ pid: process.pid });
+    this.registry = new Registry();
+    this.registry.setDefaultLabels({ pid: process.pid, hostname: os.hostname() });
 
     collectDefaultMetrics({
-      register: this.register,
+      register: this.registry,
       prefix: prometheus.metricPrefix,
-      labels: { hostname: os.hostname() },
+      labels: { appName: 'prometheus_demo' },
     });
 
     this.gateway = new client.Pushgateway(prometheus.pushGateway.url, {
@@ -51,14 +51,16 @@ export class PrometheusClient {
     prometheus.summaryMetrics.forEach(async (metric) => {
       await this.createSummaryMetric(metric);
     })
+
+    Registry.merge([this.registry, register]);
   }
 
   async getMetrics() {
-    return await this.register.metrics()
+    return await this.registry.metrics()
   }
 
   counterInc(metricName: string, val: number, labels?: Record<string, number|string>) {
-    const metric = this.register.getSingleMetric(metricName);
+    const metric = this.registry.getSingleMetric(metricName);
 
     if (metric instanceof Counter) {
       labels ? metric.inc(labels, val) : metric.inc(val);
@@ -66,7 +68,7 @@ export class PrometheusClient {
   }
 
   gaugeInc(metricName: string, val: number, labels?: Record<string, number|string>) {
-    const metric = this.register.getSingleMetric(metricName);
+    const metric = this.registry.getSingleMetric(metricName);
 
     if (metric instanceof Gauge) {
       labels ? metric.inc(labels, val) : metric.inc(val);
@@ -74,7 +76,7 @@ export class PrometheusClient {
   }
 
   gaugeDec(metricName: string, val: number, labels: Record<string, number|string>) {
-    const metric = this.register.getSingleMetric(metricName);
+    const metric = this.registry.getSingleMetric(metricName);
 
     if (metric instanceof Gauge) {
       labels ? metric.dec(labels, val) : metric.dec(val);
@@ -82,7 +84,7 @@ export class PrometheusClient {
   }
 
   gaugeSet(metricName: string, val: number, labels?: Record<string, number|string>) {
-    const metric = this.register.getSingleMetric(metricName);
+    const metric = this.registry.getSingleMetric(metricName);
 
     if (metric instanceof Gauge) {
       labels ? metric.set(labels, val) : metric.set(val);
@@ -90,50 +92,52 @@ export class PrometheusClient {
   }
 
   histogramObserve(metricName: string, val: number, labels?: Record<string, number|string>) {
-    const metric = this.register.getSingleMetric(metricName);
+    const metric = this.registry.getSingleMetric(metricName);
 
     if (metric instanceof Histogram) {
       labels ? metric.observe(labels, val) : metric.observe(val);
     }
   }
 
-  summaryObserve(metricName: string, val: number, labels?: Record<string, number|string>) {
-    const metric = this.register.getSingleMetric(metricName);
+  async summaryObserve(metricName: string, val: number, labels?: Record<string, number|string>) {
+    const metric = this.registry.getSingleMetric(metricName);
 
     if (metric instanceof Summary) {
       labels ? metric.observe(labels, val) : metric.observe(val);
     }
+
+    await this.push('pushAdd', {jobName: 'demo'});
   }
 
   async createCounterMetric<T extends string>(config: CounterConfiguration<T>) {
     const metric = new Counter(config);
-    await this.registerMetric(metric);
+    await this.registryMetric(metric);
   }
 
   async createGaugeMetric<T extends string>(config: GaugeConfiguration<T>) {
     const metric = new Gauge(config);
-    await this.registerMetric(metric);
+    await this.registryMetric(metric);
   }
 
   async createHistogramMetric<T extends string>(config: HistogramConfiguration<T>) {
     const metric = new Histogram(config);
-    await this.registerMetric(metric);
+    await this.registryMetric(metric);
   }
 
   async createSummaryMetric<T extends string>(config: SummaryConfiguration<T>) {
     const metric = new Summary(config);
-    await this.registerMetric(metric);
+    await this.registryMetric(metric);
   }
 
-  private async registerMetric(metric: Metric) {
+  private async registryMetric(metric: Metric) {
     const { name } = await metric.get();
-    if (!this.register.getSingleMetric(name)) {
-      this.register.registerMetric(metric)
+    if (!this.registry.getSingleMetric(name)) {
+      this.registry.registerMetric(metric);
     }
   }
 
   async push(
-    action: 'pushAll' | 'push' | 'delete',
+    action: 'pushAdd' | 'push' | 'delete',
     params: Pushgateway.Parameters,
   ) {
     try {

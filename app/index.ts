@@ -19,9 +19,9 @@ app.listen(port);
 // DEMO_HISTOGRAM_METRIC
 (async () => {
   while (true) {
-    const valCostco = Math.floor(Math.random() * 100);
-    prometheusClient.histogramObserve(DEMO_HISTOGRAM_METRIC, valCostco, {provider: 'Costco'});
-    console.log(`Histogram observe  ${valCostco} for provider costco`);
+    const val = Math.floor(Math.random() * 100);
+    prometheusClient.histogramObserve(DEMO_HISTOGRAM_METRIC, val, {provider: 'Tesla'});
+    console.log(`Histogram observe  ${val} for provider costco`);
 
     await (new Promise(resolve => {
       const interval = Math.floor(Math.random() * 10000);
@@ -35,8 +35,8 @@ app.listen(port);
 (async () => {
   while (true) {
     const valAuchan = Math.floor(Math.random() * 100);
-    prometheusClient.histogramObserve(DEMO_HISTOGRAM_METRIC, valAuchan, {provider: 'Auchan'});
-    console.log(`Histogram observe  ${valAuchan} for provider auchan`);
+    prometheusClient.histogramObserve(DEMO_HISTOGRAM_METRIC, valAuchan, {provider: 'Toyato'});
+    console.log(`Histogram observe  ${valAuchan} for provider Toyato`);
 
     await (new Promise(resolve => {
       const interval = Math.floor(Math.random() * 10000);

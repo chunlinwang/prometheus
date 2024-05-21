@@ -2,7 +2,7 @@ export const port = process.env.PORT || 3000;
 
 export const prometheus = {
   pushGateway: {
-    url: process.env.PROMETHEUS_PUSHGATEWAY,
+    url: process.env.PROMETHEUS_PUSH_GATEWAY,
     timeout: 5000,
     maxSocket: 5,
     keepAliveMsecs: 1000,

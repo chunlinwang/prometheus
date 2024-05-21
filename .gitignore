@@ -3,6 +3,7 @@
 /.vscode/
 
 /node_modules
+**/node_modules/**
 
 .env
 *.orig
@@ -626,3 +627,4 @@ zsdoc/data
 /tests/_output/*
 !/tests/_output/.gitkeep
 
+.pnpm-store/
